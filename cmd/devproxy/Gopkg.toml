@@ -1,0 +1,5 @@
+ignored = ["github.com/mikegleasonjr/devproxy"]
+
+[[constraint]]
+  branch = "v2"
+  name = "gopkg.in/urfave/cli.v2"
