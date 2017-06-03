@@ -10,6 +10,7 @@ import (
 	"net/http/httputil"
 	"os"
 	"strings"
+	"sync"
 )
 
 var (
@@ -160,14 +161,20 @@ func handleConnect(w http.ResponseWriter, req *http.Request) error {
 	defer client.Close()
 
 	client.Write(connEstablishedReply)
-	errc := make(chan error, 2)
-	cp := func(dst io.Writer, src io.Reader) {
-		_, err := io.Copy(dst, src)
-		errc <- err
+
+	close := sync.Once{}
+	cp := func(dst io.WriteCloser, src io.ReadCloser) {
+		b := buffers.Get()
+		defer buffers.Put(b)
+		io.CopyBuffer(dst, src, b)
+		close.Do(func() {
+			dst.Close()
+			src.Close()
+		})
 	}
 	go cp(origin, client)
-	go cp(client, origin)
-	<-errc
+	cp(client, origin)
+
 	return nil
 }
 
